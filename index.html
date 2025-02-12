@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Microphone Energy Meter</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 20px;
+    }
+    #energy {
+      font-size: 48px;
+      color: #007BFF;
+    }
+  </style>
+</head>
+<body>
+  <h1>Microphone Energy Meter</h1>
+  <p>Press "Start" to capture microphone audio and display energy level in real-time.</p>
+  <button id="startButton">Start</button>
+  <div>Energy Level: <span id="energy">0</span></div>
+
+  <script>
+    let audioContext, analyser, dataArray;
+
+    document.getElementById('startButton').addEventListener('click', async () => {
+      try {
+        // Request microphone access
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        
+        // Create AudioContext and analyser
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        analyser = audioContext.createAnalyser();
+        analyser.fftSize = 256;  // Adjust for higher/lower resolution
+        const source = audioContext.createMediaStreamSource(stream);
+        source.connect(analyser);
+        
+        // Create a data array to store audio data
+        dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+        // Start monitoring energy
+        monitorEnergy();
+      } catch (error) {
+        console.error('Error accessing microphone:', error);
+      }
+    });
+
+    function monitorEnergy() {
+      analyser.getByteTimeDomainData(dataArray);
+
+      // Compute energy as the sum of squared deviations from the center (128)
+      let energy = 0;
+      for (let i = 0; i < dataArray.length; i++) {
+        let deviation = dataArray[i] - 128;
+        energy += deviation * deviation;
+      }
+      energy = Math.sqrt(energy / dataArray.length);  // Compute RMS energy
+      document.getElementById('energy').textContent = energy.toFixed(2);
+
+      // Continue monitoring
+      requestAnimationFrame(monitorEnergy);
+    }
+  </script>
+</body>
+</html>
